@@ -4,10 +4,9 @@ import pytz
 
 
 def load_attempts(pages):
-    api_url = 'http://devman.org/api/challenges/solution_attempts/?page={}'
+    api_url = 'http://devman.org/api/challenges/solution_attempts/'
     for page in range(1, pages+1, 1):
-        request_link = api_url.format(page)
-        users = requests.get(request_link).json()
+        users = requests.get(api_url, params={'page': page}).json()
         for user in users['records']:
             yield {
                 'username': user['username'],
