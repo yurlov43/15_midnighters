@@ -8,42 +8,40 @@ def load_attempts():
     api_url = 'http://devman.org/api/challenges/solution_attempts/'
     while True:
         page = page + 1
-        attempt = requests.get(api_url, params={'page': page})
-        if attempt.status_code != requests.codes.ok:
+        response = requests.get(api_url, params={'page': page})
+        if not response:
             break
-        for user in attempt.json()['records']:
+        for attempt in response.json()['records']:
             yield {
-                'username': user['username'],
-                'timestamp': user['timestamp'],
-                'timezone': user['timezone'],
+                'username': attempt['username'],
+                'timestamp': attempt['timestamp'],
+                'timezone': attempt['timezone'],
             }
 
 
-def get_midnighters(start_time, end_time, users):
-    for user in users:
-        user_timezone = pytz.timezone(user['timezone'])
+def get_midnighters(attempts):
+    for attempt in attempts:
+        user_timezone = pytz.timezone(attempt['timezone'])
         user_time = datetime.fromtimestamp(
-            user['timestamp'],
+            attempt['timestamp'],
             tz=user_timezone).time()
-        if (user_time.hour >= start_time.hour and
-                user_time.hour < end_time.hour):
+        if user_time.hour >= 0 and user_time.hour < 6:
             yield {
-                'username': user['username'],
+                'username': attempt['username'],
                 'usertime': user_time,
             }
 
 
-def print_to_console(midnighters_users):
-    for number, midnighters_user in enumerate(midnighters_users, start=1):
+def print_to_console(midnighters_attempts):
+    for number, midnighters_attempt in enumerate(
+            midnighters_attempts, start=1):
         print('{}. {} ({})'.format(
             number,
-            midnighters_user['username'],
-            midnighters_user['usertime']))
+            midnighters_attempt['username'],
+            midnighters_attempt['usertime']))
 
 
 if __name__ == '__main__':
-    users = load_attempts()
-    start_time = time(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
-    end_time = time(hour=6, minute=0, second=0, microsecond=0, tzinfo=None)
-    midnighters_users = get_midnighters(start_time, end_time, users)
-    print_to_console(midnighters_users)
+    attempts = load_attempts()
+    midnighters_attempts = get_midnighters(attempts)
+    print_to_console(midnighters_attempts)
