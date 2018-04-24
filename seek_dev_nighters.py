@@ -3,11 +3,15 @@ from datetime import datetime, date, time
 import pytz
 
 
-def load_attempts(pages):
+def load_attempts():
+    page = 0
     api_url = 'http://devman.org/api/challenges/solution_attempts/'
-    for page in range(1, pages+1, 1):
-        users = requests.get(api_url, params={'page': page}).json()
-        for user in users['records']:
+    while True:
+        page = page + 1
+        attempt = requests.get(api_url, params={'page': page})
+        if attempt.status_code != requests.codes.ok:
+            break
+        for user in attempt.json()['records']:
             yield {
                 'username': user['username'],
                 'timestamp': user['timestamp'],
@@ -17,10 +21,12 @@ def load_attempts(pages):
 
 def get_midnighters(start_time, end_time, users):
     for user in users:
-        server_time = datetime.fromtimestamp(user['timestamp'])
         user_timezone = pytz.timezone(user['timezone'])
-        user_time = user_timezone.fromutc(server_time).time()
-        if user_time >= start_time and user_time <= end_time:
+        user_time = datetime.fromtimestamp(
+            user['timestamp'],
+            tz=user_timezone).time()
+        if (user_time.hour >= start_time.hour and
+                user_time.hour < end_time.hour):
             yield {
                 'username': user['username'],
                 'usertime': user_time,
@@ -29,12 +35,14 @@ def get_midnighters(start_time, end_time, users):
 
 def print_to_console(midnighters_users):
     for number, midnighters_user in enumerate(midnighters_users, start=1):
-        print('{}. {}'.format(number, midnighters_user['username']))
+        print('{}. {} ({})'.format(
+            number,
+            midnighters_user['username'],
+            midnighters_user['usertime']))
 
 
 if __name__ == '__main__':
-    pages = 1
-    users = load_attempts(pages)
+    users = load_attempts()
     start_time = time(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
     end_time = time(hour=6, minute=0, second=0, microsecond=0, tzinfo=None)
     midnighters_users = get_midnighters(start_time, end_time, users)
